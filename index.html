@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation Trainer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+    <!-- Setup Screen -->
+    <div id="setup-screen" class="screen active">
+        <h1 class="logo">Presentation Trainer</h1>
+        <p class="tagline">Practice your presentation with timed slides</p>
+
+        <div class="drop-zone-wrapper" id="dropzone-wrapper">
+            <input type="file" class="file-input" id="file-input" multiple>
+            <div class="drop-zone-content">
+                <i data-lucide="upload-cloud" class="drop-icon"></i>
+                <div class="drop-text">
+                    <span class="drop-primary">Drop files here</span>
+                    <span class="drop-secondary">PDF + Markdown</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="files-grid">
+            <div class="file-card" id="pdf-card">
+                <div class="file-icon">
+                    <i data-lucide="file-text"></i>
+                </div>
+                <div class="file-info">
+                    <span class="file-type">PDF Slides</span>
+                    <span class="file-name" id="pdf-name">Select or drop file</span>
+                </div>
+                <div class="file-check" id="pdf-check">
+                    <i data-lucide="check"></i>
+                </div>
+            </div>
+            <div class="file-card" id="notes-card">
+                <div class="file-icon">
+                    <i data-lucide="file-code"></i>
+                </div>
+                <div class="file-info">
+                    <span class="file-type">Speaker Notes</span>
+                    <span class="file-name" id="notes-name">Select or drop file</span>
+                </div>
+                <div class="file-check" id="notes-check">
+                    <i data-lucide="check"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="setup-actions">
+            <button class="info-btn" id="info-btn" title="How speaker notes work">
+                <i data-lucide="info"></i>
+            </button>
+            <button class="start-btn" id="start-btn" disabled>Start Presentation</button>
+        </div>
+    </div>
+
+    <!-- Info Modal -->
+    <div class="modal-overlay" id="info-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>How Speaker Notes Work</h3>
+                <button class="modal-close" id="modal-close">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <p>Speaker notes are parsed from your markdown file using <strong>H1 headings (#)</strong> as slide separators.</p>
+                
+                <div class="code-example">
+                    <pre># Title Slide
+Welcome everyone to my presentation
+
+# First Content Slide
+Here's what we'll cover today...
+- Point 1
+- Point 2
+
+# Second Content Slide  
+More notes here...</pre>
+                </div>
+
+                <ul>
+                    <li>Each <strong># Heading</strong> starts a new slide's notes</li>
+                    <li>Content under each H1 belongs to that slide</li>
+                    <li>The first H1 and its content = Slide 1</li>
+                    <li>Continue with more H1s for additional slides</li>
+                </ul>
+
+                <p class="modal-tip"><i data-lucide="lightbulb"></i> <strong>Tip:</strong> Make sure the number of H1 headings matches your PDF slide count!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Presentation Screen -->
+    <div id="presentation-screen" class="screen">
+        <div class="top-bar">
+            <div class="timer-section">
+                <div class="timer-block">
+                    <div class="timer-label">Total Time</div>
+                    <div class="timer-value" id="total-timer">00:00:00</div>
+                </div>
+                <div class="timer-block">
+                    <div class="timer-label">This Slide</div>
+                    <div class="timer-value" id="slide-timer">00:00</div>
+                </div>
+            </div>
+
+            <div class="slide-info">
+                <span class="slide-counter">Slide <strong id="current-slide">1</strong> / <strong id="total-slides">1</strong></span>
+            </div>
+
+            <div class="controls">
+                <button class="control-btn mobile-only" id="toggle-notes-btn" title="Toggle notes">
+                    <i data-lucide="file-text"></i>
+                    <span>Notes</span>
+                </button>
+                <button class="control-btn" id="pause-btn">
+                    <i data-lucide="pause"></i>
+                    <span>Pause</span>
+                </button>
+                <button class="control-btn danger" id="end-btn">
+                    <i data-lucide="square"></i>
+                    <span>End</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="slide-viewer">
+                <canvas id="pdf-canvas" class="pdf-canvas"></canvas>
+            </div>
+            <div class="notes-panel">
+                <div class="notes-header">
+                    <span class="notes-title">Speaker Notes</span>
+                    <span class="slide-badge" id="notes-slide-badge">1</span>
+                </div>
+                <div class="notes-content" id="notes-content">
+                    <p class="notes-empty">No notes for this slide</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-bar">
+            <button class="nav-btn" id="prev-btn">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+            </div>
+            <button class="nav-btn" id="next-btn">
+                <i data-lucide="chevron-right"></i>
+            </button>
+            <span class="keyboard-hint">
+                <kbd>←</kbd> <kbd>→</kbd> navigate &nbsp; <kbd>Space</kbd> pause
+            </span>
+        </div>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="results-screen" class="screen">
+        <div class="results-header">
+            <h2 class="results-title">Practice Complete!</h2>
+            <div class="total-time" id="final-total-time">00:00:00</div>
+            <p class="total-time-label">Total presentation time</p>
+        </div>
+
+        <div class="results-table-container">
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Slide</th>
+                        <th>Time Spent</th>
+                        <th>% of Total</th>
+                    </tr>
+                </thead>
+                <tbody id="results-body">
+                </tbody>
+            </table>
+        </div>
+
+        <div class="results-actions">
+            <button class="results-btn primary" id="restart-btn">Practice Again</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+    <script src="app.js"></script>
+</body>
+</html>
